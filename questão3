@@ -1,0 +1,94 @@
+#include <iostream>
+#include <vector>
+#include <queue>
+#include <cmath>
+#include <map>
+#include <set>
+#include <limits> // Para std::numeric_limits
+// Representação de um ponto 2D no campo
+struct Vector2D {
+double x, y;
+Vector2D(double _x = 0.0, double _y = 0.0) : x(_x), y(_y) {}
+double length() const { return std::sqrt(x*x + y*y); }
+Vector2D operator-(const Vector2D& other) const { return Vector2D(x -
+other.x, y - other.y); }
+// Outras operações como adição, multiplicação por escalar, etc., seriam
+definidas aqui.
+};
+// Estrutura de um nó no Grafo de Visibilidade VSS para o A*
+struct VSSNode {
+Vector2D pos; // Posição 2D do nó
+double g; // Custo do início até este nó
+double h; // Heurística (custo estimado) deste nó até o alvo
+VSSNode* parent; // Ponteiro para o nó pai para reconstruir o caminho
+VSSNode(Vector2D p) : pos(p), g(std::numeric_limits<double>::max()),
+h(0.0), parent(nullptr) {}
+double f() const { return g + h; } // Função de avaliação
+// Operador de comparação para a fila de prioridade (menor f() tem maior
+prioridade)
+bool operator>(const VSSNode& other) const {
+return f() > other.f();
+}
+// Para usar em std::set ou std::map, precisamos de um operador < ou um
+hash
+bool operator<(const VSSNode& other) const {
+if (pos.x != other.pos.x) return pos.x < other.pos.x;
+return pos.y < other.pos.y;
+}
+};
+// Heurística ideal para VSS: Distância Euclidiana
+// É admissível (nunca superestima o custo real) e consistente.
+double getHeuristic(const Vector2D& a, const Vector2D& b) {
+return (a - b).length();
+}
+// Pseudo-implementação do algoritmo A* para VSS
+std::vector<Vector2D> aStarPathfinding(const Vector2D& startPos, const
+Vector2D& goalPos, const std::vector<Vector2D>& obstacleVertices) {
+// 1. Inicialização
+VSSNode startNode(startPos);
+VSSNode goalNode(goalPos);
+std::priority_queue<VSSNode, std::vector<VSSNode>,
+std::greater<VSSNode>> openSet; // Nós a serem avaliados
+std::map<Vector2D, VSSNode*> allNodes; // Mapeia posições para nós para
+acesso rápido
+std::set<Vector2D> closedSet; // Nós já avaliados
+startNode.g = 0.0;
+startNode.h = getHeuristic(startPos, goalPos);
+openSet.push(startNode);
+allNodes[startPos] = &startNode; // Cuidado: ponteiro para objeto na
+stack, idealmente seria heap ou smart_ptr
+// 2. Loop principal
+while (!openSet.empty()) {
+VSSNode* current = allNodes[openSet.top().pos]; // Pega o nó com
+menor f()
+openSet.pop();
+if (current->pos.x == goalNode.pos.x && current->pos.y ==
+goalNode.pos.y) {
+// Caminho encontrado, reconstruir e retornar
+std::vector<Vector2D> path;
+VSSNode* temp = current;
+while (temp != nullptr) {
+path.push_back(temp->pos);
+temp = temp->parent;
+}
+std::reverse(path.begin(), path.end());
+return path;
+}
+closedSet.insert(current->pos);
+// 3. Gerar vizinhos (vértices visíveis)
+// Esta parte é crucial e depende da construção do Grafo de
+Visibilidade
+// Para cada vizinho 'neighborPos' de 'current->pos' no grafo de
+visibilidade:
+// if (closedSet.find(neighborPos) != closedSet.end()) continue;
+// double tentative_g = current->g + (current->pos -
+neighborPos).length();
+// if (tentative_g < neighborNode->g) {
+// neighborNode->parent = current;
+// neighborNode->g = tentative_g;
+// neighborNode->h = getHeuristic(neighborPos, goalPos);
+// openSet.push(*neighborNode);
+// }
+}
+return {}; // Nenhum caminho encontrado
+}
